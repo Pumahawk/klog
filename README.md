@@ -1,3 +1,8 @@
+```bash
+# Install
+go install github.com/pumahawk/klog@latest
+```
+
 ```txt
 Usage of klog
   -config string

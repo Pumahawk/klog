@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"sync"
 )
 
 func main() {
@@ -108,9 +109,15 @@ func LogSort(chans []chan LogMessage, logStream chan LogMessage) {
 }
 
 func LogNotSort(chans []chan LogMessage, logStream chan LogMessage) {
+	gr := sync.WaitGroup{}
 	for _, logc := range chans {
-		for log := range logc {
-			logStream <- log
-		}
+		gr.Add(1)
+		go func() {
+			defer gr.Done()
+			for log := range logc {
+				logStream <- log
+			}
+		}()
 	}
+	gr.Wait()
 }

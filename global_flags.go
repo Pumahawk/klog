@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -14,6 +15,7 @@ type Flags struct {
 	Sort           bool
 	TailLines      *int64
 	SinceSeconds   *int64
+	Tags           []string
 }
 
 var GlobalFlags = Flags{}
@@ -26,6 +28,7 @@ func ParseAndValidateGlobalFlags() error {
 	tailLinesFlag := flag.Int64("tail", -1, "tail lines")
 	sinceSeconds := flag.Int64("since", -1, "since seconds")
 	sinceTimeFlag := flag.String("since-time", "", "Since time (Optional)")
+	tagsFlag := flag.String("t", "", "Tags")
 
 	flag.Parse()
 
@@ -44,6 +47,10 @@ func ParseAndValidateGlobalFlags() error {
 
 	if *sinceSeconds != -1 {
 		GlobalFlags.SinceSeconds = sinceSeconds
+	}
+
+	if *tagsFlag != "" {
+		GlobalFlags.Tags = strings.Split(*tagsFlag, ",")
 	}
 
 	return nil

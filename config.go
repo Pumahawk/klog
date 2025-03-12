@@ -17,6 +17,7 @@ type LogConfig struct {
 	Namespace  *string `json:"namespace"`
 	Labels     string `json:"labels"`
 	JQTemplate *string `json:"jqtemplate"`
+	Tags       []string `json:"tags"`
 }
 
 func LoadConfig() (*Config, error) {

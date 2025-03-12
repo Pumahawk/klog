@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"slices"
 	"sync"
 )
 
@@ -20,8 +21,11 @@ func main() {
 	}
 
 	var logsc []chan LogMessage
-
 	for _, logConfig := range config.Logs {
+		if len(GlobalFlags.Tags) > 0 && !hasAllTags(logConfig.Tags, GlobalFlags.Tags) {
+			continue
+		}
+
 		jqTemplate := config.JQTemplate;
 		if jqTemplate == nil {
 			jqTemplate = logConfig.JQTemplate
@@ -120,4 +124,13 @@ func LogNotSort(chans []chan LogMessage, logStream chan LogMessage) {
 		}()
 	}
 	gr.Wait()
+}
+
+func hasAllTags(logTags []string, tags []string) bool {
+	for _, tag := range tags {
+		if !slices.Contains(logTags, tag) {
+			return false
+		}
+	}
+	return true
 }

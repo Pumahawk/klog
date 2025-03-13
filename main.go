@@ -41,11 +41,7 @@ func main() {
 			for logConfig := range cl {
 				func() {
 					defer wg.Done()
-					if len(GlobalFlags.Tags) > 0 && !hasAllTags(logConfig.Tags, GlobalFlags.Tags) {
-						return
-					}
-
-					if len(GlobalFlags.TagsOr) > 0 && !hasAnyTags(logConfig.Tags, GlobalFlags.TagsOr) {
+					if !matchTags(logConfig.Tags, GlobalFlags.Tags, GlobalFlags.TagsOr) {
 						return
 					}
 
@@ -178,6 +174,18 @@ func hasAllTags(logTags []string, tags []string) bool {
 	return true
 }
 
+func matchTags(logsTags, tags, tagOr []string) bool {
+	if len(GlobalFlags.Tags) > 0 && !hasAllTags(logsTags, tags) {
+		return false
+	}
+
+	if len(GlobalFlags.TagsOr) > 0 && !hasAnyTags(logsTags, tagOr) {
+		return false
+	}
+
+	return true
+}
+
 func printInfo(config Config) {
 	var globalNamespace string
 	if config.Namespace != nil {
@@ -191,14 +199,27 @@ func printInfo(config Config) {
 	fmt.Printf("Global namespace:  %s\n", globalNamespace)
 	fmt.Printf("Global jqtemplate: %s\n", globalJqTemplate)
 
-	fmt.Println("Tags:")
 	var tags []string
+	var names []string
 	for _, logConf := range config.Logs {
+		if !matchTags(logConf.Tags, GlobalFlags.Tags, GlobalFlags.TagsOr) {
+			continue
+		}
+		names = append(names, logConf.Name)
 		for _, tag := range logConf.Tags {
 			if !slices.Contains(tags, tag) {
 				tags = append(tags, tag)
-				fmt.Printf("\t%s\n", tag)
 			}
 		}
+	}
+
+	fmt.Println("Tags:")
+	for _, tag := range tags {
+		fmt.Printf("\t%s\n", tag)
+	}
+
+	fmt.Println("Logs conf:")
+	for _, name := range names {
+		fmt.Printf("\t%s\n", name)
 	}
 }

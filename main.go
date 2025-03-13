@@ -22,9 +22,11 @@ func main() {
 
 	var logsc []chan LogMessage
 	logscr := make(chan chan LogMessage)
+	logscrAdded := make(chan bool)
 	go func() {
 		for lc := range logscr {
 			logsc = append(logsc, lc)
+			logscrAdded <- true
 		}
 	}()
 	wg := sync.WaitGroup{}
@@ -59,6 +61,7 @@ func main() {
 					for _, podName := range pods {
 						lc := make(chan LogMessage, 200)
 						logscr <- lc
+						<- logscrAdded
 						go func(pod string, cfg LogConfig) {
 							defer close(lc)
 							err := StreamPodLogs(clientset, logConfig.Name, *namespace, pod, *jqTemplate, lc)

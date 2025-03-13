@@ -26,6 +26,10 @@ func main() {
 			continue
 		}
 
+		if len(GlobalFlags.TagsOr) > 0 && !hasAnyTags(logConfig.Tags, GlobalFlags.TagsOr) {
+			continue
+		}
+
 		jqTemplate := config.JQTemplate;
 		if jqTemplate == nil {
 			jqTemplate = logConfig.JQTemplate
@@ -124,6 +128,15 @@ func LogNotSort(chans []chan LogMessage, logStream chan LogMessage) {
 		}()
 	}
 	gr.Wait()
+}
+
+func hasAnyTags(logTags []string, tags []string) bool {
+	for _, tag := range tags {
+		if slices.Contains(logTags, tag) {
+			return true
+		}
+	}
+	return false
 }
 
 func hasAllTags(logTags []string, tags []string) bool {

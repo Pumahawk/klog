@@ -16,6 +16,7 @@ type Flags struct {
 	TailLines      *int64
 	SinceSeconds   *int64
 	Tags           []string
+	TagsOr         []string
 }
 
 var GlobalFlags = Flags{}
@@ -29,6 +30,7 @@ func ParseAndValidateGlobalFlags() error {
 	sinceSeconds := flag.Int64("since", -1, "since seconds")
 	sinceTimeFlag := flag.String("since-time", "", "Since time (Optional)")
 	tagsFlag := flag.String("t", "", "Tags")
+	tagsOrFlag := flag.String("tor", "", "Tags OR")
 
 	flag.Parse()
 
@@ -51,6 +53,10 @@ func ParseAndValidateGlobalFlags() error {
 
 	if *tagsFlag != "" {
 		GlobalFlags.Tags = strings.Split(*tagsFlag, ",")
+	}
+
+	if *tagsOrFlag != "" {
+		GlobalFlags.TagsOr = strings.Split(*tagsOrFlag, ",")
 	}
 
 	return nil

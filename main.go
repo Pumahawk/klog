@@ -15,6 +15,11 @@ func main() {
 		log.Fatalf("Error loading configuration: %v", err)
 	}
 
+	if GlobalFlags.Info {
+		printInfo(*config);
+		return
+	}
+
 	clientset, err := GetKubernetesClient()
 	if err != nil {
 		log.Fatalf("Error creating Kubernetes client: %v", err)
@@ -171,4 +176,29 @@ func hasAllTags(logTags []string, tags []string) bool {
 		}
 	}
 	return true
+}
+
+func printInfo(config Config) {
+	var globalNamespace string
+	if config.Namespace != nil {
+		globalNamespace = *config.Namespace
+	}
+	var globalJqTemplate string
+	if config.JQTemplate != nil {
+		globalJqTemplate = *config.JQTemplate
+	}
+
+	fmt.Printf("Global namespace:  %s\n", globalNamespace)
+	fmt.Printf("Global jqtemplate: %s\n", globalJqTemplate)
+
+	fmt.Println("Tags:")
+	var tags []string
+	for _, logConf := range config.Logs {
+		for _, tag := range logConf.Tags {
+			if !slices.Contains(tags, tag) {
+				tags = append(tags, tag)
+				fmt.Printf("\t%s\n", tag)
+			}
+		}
+	}
 }

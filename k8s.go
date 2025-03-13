@@ -17,6 +17,8 @@ func GetKubernetesClient() (*kubernetes.Clientset, error) {
 	if err != nil {
 		return nil, fmt.Errorf("errore nel caricamento del kubeconfig: %v", err)
 	}
+	config.QPS = float32(GlobalFlags.QPS)
+	config.Burst = GlobalFlags.Burst
 	return kubernetes.NewForConfig(config)
 }
 

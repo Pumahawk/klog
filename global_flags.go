@@ -17,6 +17,9 @@ type Flags struct {
 	SinceSeconds   *int64
 	Tags           []string
 	TagsOr         []string
+	NumThread      int
+	QPS            float64
+	Burst          int
 }
 
 var GlobalFlags = Flags{}
@@ -26,6 +29,9 @@ func ParseAndValidateGlobalFlags() error {
 	flag.StringVar(&GlobalFlags.ConfigPath, "config", "config.json", "Config path")
 	flag.BoolVar(&GlobalFlags.Follow, "follow", false, "follow logs")
 	flag.BoolVar(&GlobalFlags.Sort, "sort", false, "sort log stream")
+	flag.IntVar(&GlobalFlags.NumThread, "n-thread", 10, "Number thread load pods informations")
+	flag.Float64Var(&GlobalFlags.QPS, "qps", 100, "kubernates clients QPS")
+	flag.IntVar(&GlobalFlags.Burst, "burst", 100, "kubernates clients Burst")
 	tailLinesFlag := flag.Int64("tail", -1, "tail lines")
 	sinceSeconds := flag.Int64("since", -1, "since seconds")
 	sinceTimeFlag := flag.String("since-time", "", "Since time (Optional)")

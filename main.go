@@ -21,41 +21,63 @@ func main() {
 	}
 
 	var logsc []chan LogMessage
-	for _, logConfig := range config.Logs {
-		if len(GlobalFlags.Tags) > 0 && !hasAllTags(logConfig.Tags, GlobalFlags.Tags) {
-			continue
-		}
-
-		if len(GlobalFlags.TagsOr) > 0 && !hasAnyTags(logConfig.Tags, GlobalFlags.TagsOr) {
-			continue
-		}
-
-		jqTemplate := config.JQTemplate;
-		if jqTemplate == nil {
-			jqTemplate = logConfig.JQTemplate
-		}
-		namespace := config.Namespace;
-		if namespace == nil {
-			namespace = logConfig.Namespace
-		}
-		pods, err := GetPodsByLabel(clientset, *namespace, logConfig.Labels)
-		if err != nil {
-			log.Printf("Error retrieving pods for namespace %s and labels %s: %v", *namespace, logConfig.Labels, err)
-			continue
-		}
-
-		for _, podName := range pods {
-			lc := make(chan LogMessage, 200)
+	logscr := make(chan chan LogMessage)
+	go func() {
+		for lc := range logscr {
 			logsc = append(logsc, lc)
-			go func(pod string, cfg LogConfig) {
-				defer close(lc)
-				err := StreamPodLogs(clientset, logConfig.Name, *namespace, pod, *jqTemplate, lc)
-				if err != nil {
-					log.Printf("Error handling logs for pod %s: %v", pod, err)
-				}
-			}(podName, logConfig)
 		}
+	}()
+	wg := sync.WaitGroup{}
+	cl := make(chan LogConfig)
+	for i := 0; i < GlobalFlags.NumThread; i++ {
+		go func() {
+			for logConfig := range cl {
+				func() {
+					defer wg.Done()
+					if len(GlobalFlags.Tags) > 0 && !hasAllTags(logConfig.Tags, GlobalFlags.Tags) {
+						return
+					}
+
+					if len(GlobalFlags.TagsOr) > 0 && !hasAnyTags(logConfig.Tags, GlobalFlags.TagsOr) {
+						return
+					}
+
+					jqTemplate := config.JQTemplate;
+					if jqTemplate == nil {
+						jqTemplate = logConfig.JQTemplate
+					}
+					namespace := config.Namespace;
+					if namespace == nil {
+						namespace = logConfig.Namespace
+					}
+					pods, err := GetPodsByLabel(clientset, *namespace, logConfig.Labels)
+					if err != nil {
+						log.Printf("Error retrieving pods for namespace %s and labels %s: %v", *namespace, logConfig.Labels, err)
+						return
+					}
+
+					for _, podName := range pods {
+						lc := make(chan LogMessage, 200)
+						logscr <- lc
+						go func(pod string, cfg LogConfig) {
+							defer close(lc)
+							err := StreamPodLogs(clientset, logConfig.Name, *namespace, pod, *jqTemplate, lc)
+							if err != nil {
+								log.Printf("Error handling logs for pod %s: %v", pod, err)
+							}
+						}(podName, logConfig)
+					}
+				}()
+			}
+		}()
 	}
+	for _, logConfig := range config.Logs {
+		wg.Add(1)
+		cl <- logConfig
+	}
+	wg.Wait()
+	close(logscr)
+	close(cl)
 
 	logStream := make(chan LogMessage, 200)
 	go func() {

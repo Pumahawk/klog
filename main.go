@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"slices"
+	"strings"
 	"sync"
 )
 
@@ -41,6 +42,9 @@ func main() {
 			for logConfig := range cl {
 				func() {
 					defer wg.Done()
+					if !matchName(logConfig.Name, GlobalFlags.Name) {
+					}
+
 					if !matchTags(logConfig.Tags, GlobalFlags.Tags, GlobalFlags.TagsOr) {
 						return
 					}
@@ -186,6 +190,13 @@ func matchTags(logsTags, tags, tagOr []string) bool {
 	return true
 }
 
+func matchName(confName string, nameFilter *string) bool {
+	if nameFilter != nil && *nameFilter != strings.Trim(confName, " ") {
+		return false
+	}
+	return true
+}
+
 func printInfo(config Config) {
 	var globalNamespace string
 	if config.Namespace != nil {
@@ -202,10 +213,15 @@ func printInfo(config Config) {
 	var tags []string
 	var names []string
 	for _, logConf := range config.Logs {
+		if !matchName(logConf.Name, GlobalFlags.Name) {
+			continue
+		}
+
 		if !matchTags(logConf.Tags, GlobalFlags.Tags, GlobalFlags.TagsOr) {
 			continue
 		}
-		names = append(names, logConf.Name)
+
+		names = append(names, strings.Trim(logConf.Name, " "))
 		for _, tag := range logConf.Tags {
 			if !slices.Contains(tags, tag) {
 				tags = append(tags, tag)

@@ -21,6 +21,7 @@ type Flags struct {
 	QPS            float64
 	Burst          int
 	Info           bool
+	Name           *string
 }
 
 var GlobalFlags = Flags{}
@@ -34,6 +35,7 @@ func ParseAndValidateGlobalFlags() error {
 	flag.IntVar(&GlobalFlags.NumThread, "n-thread", 10, "Number thread load pods informations")
 	flag.Float64Var(&GlobalFlags.QPS, "qps", 100, "kubernates clients QPS")
 	flag.IntVar(&GlobalFlags.Burst, "burst", 100, "kubernates clients Burst")
+	nameFlag := flag.String("name", "", "Name configuration")
 	tailLinesFlag := flag.Int64("tail", -1, "tail lines")
 	sinceSeconds := flag.Int64("since", -1, "since seconds")
 	sinceTimeFlag := flag.String("since-time", "", "Since time (Optional)")
@@ -41,6 +43,10 @@ func ParseAndValidateGlobalFlags() error {
 	tagsOrFlag := flag.String("tor", "", "Tags OR")
 
 	flag.Parse()
+
+	if *nameFlag != "" {
+		GlobalFlags.Name = nameFlag
+	}
 
 	if *sinceTimeFlag != "" {
 		var time, err = time.Parse(time.RFC3339, *sinceTimeFlag);

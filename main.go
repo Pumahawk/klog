@@ -43,6 +43,7 @@ func main() {
 				func() {
 					defer wg.Done()
 					if !matchName(logConfig.Name, GlobalFlags.Name) {
+						return
 					}
 
 					if !matchTags(logConfig.Tags, GlobalFlags.Tags, GlobalFlags.TagsOr) {

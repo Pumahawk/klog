@@ -191,8 +191,8 @@ func matchTags(logsTags, tags, tagOr []string) bool {
 	return true
 }
 
-func matchName(confName string, nameFilter *string) bool {
-	if nameFilter != nil && *nameFilter != strings.Trim(confName, " ") {
+func matchName(confName string, nameFilter []string) bool {
+	if len(nameFilter) > 0 && !slices.Contains(nameFilter, strings.Trim(confName, " ")) {
 		return false
 	}
 	return true

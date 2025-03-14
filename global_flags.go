@@ -21,7 +21,7 @@ type Flags struct {
 	QPS            float64
 	Burst          int
 	Info           bool
-	Name           *string
+	Name           []string
 }
 
 var GlobalFlags = Flags{}
@@ -45,7 +45,7 @@ func ParseAndValidateGlobalFlags() error {
 	flag.Parse()
 
 	if *nameFlag != "" {
-		GlobalFlags.Name = nameFlag
+		GlobalFlags.Name = strings.Split(*nameFlag, ",")
 	}
 
 	if *sinceTimeFlag != "" {

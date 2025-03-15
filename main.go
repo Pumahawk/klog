@@ -6,6 +6,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"time"
 )
 
 func main() {
@@ -26,12 +27,18 @@ func main() {
 		log.Fatalf("Error creating Kubernetes client: %v", err)
 	}
 
-	var logsc []chan LogMessage
-	logscr := make(chan chan LogMessage)
+	var logsc []logChanMessage
+	var logscNames []string
+	logscr := make(chan logChanMessage)
 	logscrAdded := make(chan bool)
 	go func() {
 		for lc := range logscr {
-			logsc = append(logsc, lc)
+			sign := fmt.Sprintf("%s%s", lc.PodInfo.PodNamespace, lc.PodInfo.PodName)
+			if !slices.Contains(logscNames, sign) {
+				logsc = append(logsc, lc)
+				logscNames = append(logscNames, sign)
+				logDebug(fmt.Sprintf("Add pod %s/%s to logs watch list", lc.PodInfo.PodNamespace, lc.PodInfo.PodName))
+			}
 			logscrAdded <- true
 		}
 	}()
@@ -41,7 +48,11 @@ func main() {
 		go func() {
 			for logConfig := range cl {
 				func() {
-					defer wg.Done()
+					defer func() {
+						if !GlobalFlags.Follow {
+							wg.Done()
+						}
+					}()
 					if !matchName(logConfig.Name, GlobalFlags.Name) {
 						return
 					}
@@ -65,8 +76,9 @@ func main() {
 					}
 
 					for _, podName := range pods {
+						logDebug(fmt.Sprintf("Find pod %s/%s", *namespace, podName))
 						lc := make(chan LogMessage, 200)
-						logscr <- lc
+						logscr <- logChanMessage{Channel: lc, PodInfo: podInfo{PodName: podName, PodNamespace: *namespace}}
 						<- logscrAdded
 						go func(pod string, cfg LogConfig) {
 							defer close(lc)
@@ -80,21 +92,39 @@ func main() {
 			}
 		}()
 	}
-	for _, logConfig := range config.Logs {
-		wg.Add(1)
-		cl <- logConfig
-	}
+	wg.Add(1)
+	go func() {
+		if GlobalFlags.Follow {
+			wg.Done()
+		}
+		for i := 0;; time.Sleep(5 * time.Second) {
+			i++
+			logDebug(fmt.Sprintf("Search pods %d", i))
+			for _, logConfig := range config.Logs {
+				if !GlobalFlags.Follow {
+					wg.Add(1)
+				}
+				cl <- logConfig
+
+			}
+			if !GlobalFlags.Follow {
+				break
+			}
+		}
+		wg.Done()
+	}()
 	wg.Wait()
-	close(logscr)
-	close(cl)
+	logDebug(fmt.Sprintf("Start logging"))
 
 	logStream := make(chan LogMessage, 200)
 	go func() {
 		defer close(logStream)
 		if GlobalFlags.Sort {
+			logDebug(fmt.Sprintf("Sort logging enabled"))
 			LogSort(logsc, logStream)
 		} else {
-			LogNotSort(logsc, logStream)
+			logDebug(fmt.Sprintf("Sort logging disabled"))
+			LogNotSort(&logsc, logStream)
 		}
 	}()
 	for log := range logStream {
@@ -102,7 +132,7 @@ func main() {
 	}
 }
 
-func LogSort(chans []chan LogMessage, logStream chan LogMessage) {
+func LogSort(chans []logChanMessage, logStream chan LogMessage) {
 	if len(chans) == 0 {
 		return
 	}
@@ -114,7 +144,7 @@ func LogSort(chans []chan LogMessage, logStream chan LogMessage) {
 		endOfLogs := true
 		for i, c := range chans {
 			if logs[i] == nil {
-				if log, more := <- c; more {
+				if log, more := <- c.Channel; more {
 					logs[i] = &log
 					endOfLogs = false
 				}
@@ -147,16 +177,33 @@ func LogSort(chans []chan LogMessage, logStream chan LogMessage) {
 	}
 }
 
-func LogNotSort(chans []chan LogMessage, logStream chan LogMessage) {
+func LogNotSort(chans *[]logChanMessage, logStream chan LogMessage) {
 	gr := sync.WaitGroup{}
-	for _, logc := range chans {
-		gr.Add(1)
-		go func() {
-			defer gr.Done()
-			for log := range logc {
-				logStream <- log
+
+	var readedChannels []string;
+	for i := 0;;time.Sleep(5 * time.Second) {
+		i++
+		logDebug(fmt.Sprintf("%d: Logging for channels", i))
+		for j, logc := range *chans {
+			sign := fmt.Sprintf("%s%s", logc.PodInfo.PodNamespace, logc.PodInfo.PodName)
+			if slices.Contains(readedChannels, sign) {
+				logDebug(fmt.Sprintf("Skip logging pod %d...", j))
+				continue
+			} else {
+				logDebug(fmt.Sprintf("Start logging pod %d...", j))
+				readedChannels = append(readedChannels, sign)
 			}
-		}()
+			gr.Add(1)
+			go func() {
+				defer gr.Done()
+				for log := range logc.Channel {
+					logStream <- log
+				}
+			}()
+		}
+		if !GlobalFlags.Follow {
+			break
+		}
 	}
 	gr.Wait()
 }
@@ -239,4 +286,18 @@ func printInfo(config Config) {
 	for _, name := range names {
 		fmt.Printf("\t%s\n", name)
 	}
+}
+
+type logChanMessage struct {
+	Channel chan LogMessage
+	PodInfo podInfo
+}
+
+type podInfo struct {
+	PodName string
+	PodNamespace string
+}
+
+func logDebug(message string) {
+	log.Println(message)
 }

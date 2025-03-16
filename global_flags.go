@@ -42,7 +42,7 @@ func ParseAndValidateGlobalFlags() error {
 	nameFlag := flag.String("name", "", "Name configuration")
 	tailLinesFlag := flag.Int64("tail", -1, "tail lines")
 	sinceSeconds := flag.Int64("since", -1, "since seconds")
-	sinceTimeFlag := flag.String("since-time", "", "Since time (Optional)")
+	sinceTimeFlag := flag.String("since-time", "", "Since time")
 	tagsFlag := flag.String("t", "", "Tags")
 	tagsOrFlag := flag.String("tor", "", "Tags OR")
 

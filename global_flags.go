@@ -22,6 +22,7 @@ type Flags struct {
 	Burst          int
 	Info           bool
 	Name           []string
+	Debug          bool
 }
 
 var GlobalFlags = Flags{}
@@ -32,6 +33,7 @@ func ParseAndValidateGlobalFlags() error {
 	flag.BoolVar(&GlobalFlags.Follow, "follow", false, "follow logs")
 	flag.BoolVar(&GlobalFlags.Sort, "sort", false, "sort log stream")
 	flag.BoolVar(&GlobalFlags.Info, "info", false, "print config info")
+	flag.BoolVar(&GlobalFlags.Debug, "debug", false, "Debug logging")
 	flag.IntVar(&GlobalFlags.NumThread, "n-thread", 10, "Number thread load pods informations")
 	flag.Float64Var(&GlobalFlags.QPS, "qps", 100, "kubernates clients QPS")
 	flag.IntVar(&GlobalFlags.Burst, "burst", 100, "kubernates clients Burst")

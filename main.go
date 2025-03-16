@@ -299,5 +299,7 @@ type podInfo struct {
 }
 
 func logDebug(message string) {
-	log.Println(message)
+	if GlobalFlags.Debug {
+		log.Println(message)
+	}
 }

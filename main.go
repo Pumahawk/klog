@@ -97,7 +97,7 @@ func main() {
 		if GlobalFlags.Follow {
 			wg.Done()
 		}
-		for i := 0;; time.Sleep(5 * time.Second) {
+		for i := 0;; time.Sleep(time.Duration(GlobalFlags.RefreshSeconds) * time.Second) {
 			i++
 			logDebug(fmt.Sprintf("Search pods %d", i))
 			for _, logConfig := range config.Logs {
@@ -181,13 +181,12 @@ func LogNotSort(chans *[]logChanMessage, logStream chan LogMessage) {
 	gr := sync.WaitGroup{}
 
 	var readedChannels []string;
-	for i := 0;;time.Sleep(5 * time.Second) {
+	logDebug("Logging for channels")
+	for i := 0;;time.Sleep(1 * time.Second) {
 		i++
-		logDebug(fmt.Sprintf("%d: Logging for channels", i))
 		for j, logc := range *chans {
 			sign := fmt.Sprintf("%s%s", logc.PodInfo.PodNamespace, logc.PodInfo.PodName)
 			if slices.Contains(readedChannels, sign) {
-				logDebug(fmt.Sprintf("Skip logging pod %d...", j))
 				continue
 			} else {
 				logDebug(fmt.Sprintf("Start logging pod %d...", j))

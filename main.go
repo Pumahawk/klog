@@ -11,8 +11,11 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
+var kubeClient *kubernetes.Clientset;
+
 func main() {
 	ParseAndValidateGlobalFlags()
+	initSingleton()
 	config, err := LoadConfig()
 	if err != nil {
 		log.Fatalf("Error loading configuration: %v", err)
@@ -34,7 +37,15 @@ func main() {
 	logDebug("End klog")
 }
 
-func GetKubernetesClientOrPanic() *kubernetes.Clientset {
+func initSingleton() {
+	kubeClient = getKubernetesClientOrPanic();
+}
+
+func getKubeClientSingleton() *kubernetes.Clientset {
+	return kubeClient
+}
+
+func getKubernetesClientOrPanic() *kubernetes.Clientset {
 	clientset, err := GetKubernetesClient()
 	if err != nil {
 		log.Fatalf("Error creating Kubernetes client: %v", err)
@@ -110,7 +121,7 @@ func collectLogStreamChannels(logConfigs []LogConfig, logStream chan []logChanMe
 }
 
 func logStreamCrawler(config *Config, logConfig LogConfig) (lcms []logChanMessageFunc) {
-	clientset := GetKubernetesClientOrPanic()
+	clientset := getKubeClientSingleton()
 	jqTemplate := config.JQTemplate;
 	if jqTemplate == nil {
 		jqTemplate = logConfig.JQTemplate

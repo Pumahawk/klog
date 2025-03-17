@@ -43,7 +43,7 @@ func GetKubernetesClientOrPanic() *kubernetes.Clientset {
 }
 
 func logStreamCrawlerThreadPool(logStreamChannels chan []logChanMessage, config *Config) {
-	logStream := make(chan []logChanMessage)
+	logStream := make(chan []logChanMessageFunc)
 	chanLogCongig := make(chan LogConfig)
 	var logConfigs []LogConfig
 	for _, logConfig := range config.Logs {
@@ -71,7 +71,7 @@ func logStreamCrawlerThreadPool(logStreamChannels chan []logChanMessage, config 
 	logDebug("End stream all log configs")
 }
 
-func collectLogStreamChannels(logConfigs []LogConfig, logStream chan []logChanMessage, logStreamChannels chan []logChanMessage) {
+func collectLogStreamChannels(logConfigs []LogConfig, logStream chan []logChanMessageFunc, logStreamChannels chan []logChanMessage) {
 	var alreadyFindPod []string
 	if GlobalFlags.Follow {
 		for lcs := range logStream {
@@ -80,7 +80,7 @@ func collectLogStreamChannels(logConfigs []LogConfig, logStream chan []logChanMe
 				if sign := lc.sign(); !slices.Contains(alreadyFindPod, sign) {
 					logDebug(fmt.Sprintf("New pod %s", sign))
 					alreadyFindPod = append(alreadyFindPod, sign)
-					logStreamChannels <- []logChanMessage{lc}
+					logStreamChannels <- []logChanMessage{lc.toLogChanMessage()}
 				}
 			}
 		}
@@ -93,7 +93,7 @@ func collectLogStreamChannels(logConfigs []LogConfig, logStream chan []logChanMe
 				if sign := lc.sign(); !slices.Contains(alreadyFindPod, sign) {
 					logDebug(fmt.Sprintf("New pod %s", sign))
 					alreadyFindPod = append(alreadyFindPod, sign)
-					lcms = append(lcms, lc)
+					lcms = append(lcms, lc.toLogChanMessage())
 				}
 			}
 		}
@@ -104,10 +104,10 @@ func collectLogStreamChannels(logConfigs []LogConfig, logStream chan []logChanMe
 	}
 }
 
-func logStreamCrawler(config *Config, logStreamChannels chan []logChanMessage, chanLogConfig chan LogConfig) {
+func logStreamCrawler(config *Config, logStreamChannels chan []logChanMessageFunc, chanLogConfig chan LogConfig) {
 	clientset := GetKubernetesClientOrPanic()
 	for logConfig := range chanLogConfig {
-		var lcms []logChanMessage
+		var lcms []logChanMessageFunc
 		jqTemplate := config.JQTemplate;
 		if jqTemplate == nil {
 			jqTemplate = logConfig.JQTemplate
@@ -124,16 +124,19 @@ func logStreamCrawler(config *Config, logStreamChannels chan []logChanMessage, c
 
 		for _, podName := range pods {
 			logDebug(fmt.Sprintf("Find pod %s/%s", *namespace, podName))
-			lc := make(chan LogMessage, 200)
-			lgm := logChanMessage{Channel: lc, PodInfo: podInfo{PodName: podName, PodNamespace: *namespace}}
+			channelGetter := func() chan LogMessage {
+				lc := make(chan LogMessage, 200)
+				go func(pod string, cfg LogConfig) {
+					defer close(lc)
+					err := StreamPodLogs(clientset, logConfig.Name, *namespace, pod, *jqTemplate, lc)
+					if err != nil {
+						log.Printf("Error handling logs for pod %s: %v", pod, err)
+					}
+				}(podName, logConfig)
+				return lc
+			}
+			lgm := logChanMessageFunc{ChannelFunc: channelGetter, PodInfo: podInfo{PodName: podName, PodNamespace: *namespace}}
 			lcms = append(lcms, lgm)
-			go func(pod string, cfg LogConfig) {
-				defer close(lc)
-				err := StreamPodLogs(clientset, logConfig.Name, *namespace, pod, *jqTemplate, lc)
-				if err != nil {
-					log.Printf("Error handling logs for pod %s: %v", pod, err)
-				}
-			}(podName, logConfig)
 		}
 		logStreamChannels <- lcms
 		logDebug("End log config")
@@ -401,12 +404,28 @@ func printInfo(config Config) {
 	}
 }
 
+type logChanMessageFunc struct {
+	ChannelFunc func() chan LogMessage
+	PodInfo podInfo
+}
+
 type logChanMessage struct {
 	Channel chan LogMessage
 	PodInfo podInfo
 }
 
 func (lcm *logChanMessage) sign() string {
+	return fmt.Sprintf("%s/%s", lcm.PodInfo.PodNamespace, lcm.PodInfo.PodName)
+}
+
+func (lcm *logChanMessageFunc) toLogChanMessage() logChanMessage {
+	return logChanMessage {
+		PodInfo: lcm.PodInfo,
+		Channel: lcm.ChannelFunc(),
+	}
+}
+
+func (lcm *logChanMessageFunc) sign() string {
 	return fmt.Sprintf("%s/%s", lcm.PodInfo.PodNamespace, lcm.PodInfo.PodName)
 }
 

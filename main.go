@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func main() {
+func main2() {
 	ParseAndValidateGlobalFlags()
 
 	config, err := LoadConfig()

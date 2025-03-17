@@ -53,12 +53,12 @@ func ParseAndValidateGlobalFlags() error {
 	}
 
 	if *sinceTimeFlag != "" {
-		var time, err = time.Parse(time.RFC3339, *sinceTimeFlag);
+		var time, err = time.Parse(time.RFC3339, *sinceTimeFlag)
 		if err != nil {
 			return fmt.Errorf("Unable to read since-time, %s", *sinceTimeFlag)
 		}
 		GlobalFlags.SinceTime = &time
-		
+
 	}
 
 	if *tailLinesFlag != -1 {

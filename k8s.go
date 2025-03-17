@@ -63,14 +63,14 @@ func StreamPodLogs(clientset *kubernetes.Clientset, name, namespace, podName, jq
 
 func generatePodLogOptions() v1.PodLogOptions {
 	podLogOptions := v1.PodLogOptions{
-		Follow: GlobalFlags.Follow,
-		Timestamps: true,
-		TailLines: GlobalFlags.TailLines,
+		Follow:       GlobalFlags.Follow,
+		Timestamps:   true,
+		TailLines:    GlobalFlags.TailLines,
 		SinceSeconds: GlobalFlags.SinceSeconds,
 	}
 
 	if GlobalFlags.SinceTime != nil {
-		time := metav1.NewTime(*GlobalFlags.SinceTime);
+		time := metav1.NewTime(*GlobalFlags.SinceTime)
 		podLogOptions.SinceTime = &time
 	}
 

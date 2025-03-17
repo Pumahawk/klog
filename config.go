@@ -7,16 +7,16 @@ import (
 )
 
 type Config struct {
-	Namespace  *string      `json:"namespace"`
-	JQTemplate *string      `json:"jqtemplate"`
+	Namespace  *string     `json:"namespace"`
+	JQTemplate *string     `json:"jqtemplate"`
 	Logs       []LogConfig `json:"logs"`
 }
 
 type LogConfig struct {
-	Name       string `json:"Name"`
-	Namespace  *string `json:"namespace"`
-	Labels     string `json:"labels"`
-	JQTemplate *string `json:"jqtemplate"`
+	Name       string   `json:"Name"`
+	Namespace  *string  `json:"namespace"`
+	Labels     string   `json:"labels"`
+	JQTemplate *string  `json:"jqtemplate"`
 	Tags       []string `json:"tags"`
 }
 
@@ -34,4 +34,3 @@ func LoadConfig() (*Config, error) {
 
 	return &config, nil
 }
-

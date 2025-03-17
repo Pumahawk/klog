@@ -10,9 +10,9 @@ import (
 
 func ProcessLogWithJQ(jsonStr, jqTemplate string) (string, error) {
 	var logObj map[string]interface{}
-    	if err := json.Unmarshal([]byte(jsonStr), &logObj); err != nil {
-        	return "", fmt.Errorf("errore nel parsing del log: %v", err)
-    	}
+	if err := json.Unmarshal([]byte(jsonStr), &logObj); err != nil {
+		return "", fmt.Errorf("errore nel parsing del log: %v", err)
+	}
 	query, err := gojq.Parse(jqTemplate)
 	if err != nil {
 		return "", fmt.Errorf("errore nel parsing della query jq: %v", err)
@@ -34,25 +34,24 @@ func ProcessLogWithJQ(jsonStr, jqTemplate string) (string, error) {
 	return result, nil
 }
 
-
 func getLogMessage(name string, namespace string, podName string, log string) LogMessage {
 	re := regexp.MustCompile(`^(\S+)\s(.*)`)
 	match := re.FindStringSubmatch(log)
 	return LogMessage{
-		Name: name,
+		Name:      name,
 		Namespace: namespace,
-		PodName: podName,
-		Time: match[1],
-		Message: match[2],
+		PodName:   podName,
+		Time:      match[1],
+		Message:   match[2],
 	}
 }
 
 type LogMessage struct {
-	Name string
+	Name      string
 	Namespace string
-	PodName string
-	Time string
-	Message string
+	PodName   string
+	Time      string
+	Message   string
 }
 
 func (log *LogMessage) ToString() string {

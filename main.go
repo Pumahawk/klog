@@ -11,7 +11,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-var kubeClient *kubernetes.Clientset;
+var kubeClient *kubernetes.Clientset
 
 func main() {
 	ParseAndValidateGlobalFlags()
@@ -22,7 +22,7 @@ func main() {
 	}
 
 	if GlobalFlags.Info {
-		printInfo(*config);
+		printInfo(*config)
 		return
 	}
 
@@ -30,7 +30,7 @@ func main() {
 		log.Fatalf("Error creating Kubernetes client: %v", err)
 	}
 
-	logStreamChannels := make(chan []logChanMessage);
+	logStreamChannels := make(chan []logChanMessage)
 	go logStreamCrawlerThreadPool(logStreamChannels, config)
 
 	startLogging(logStreamChannels)
@@ -38,7 +38,7 @@ func main() {
 }
 
 func initSingleton() {
-	kubeClient = getKubernetesClientOrPanic();
+	kubeClient = getKubernetesClientOrPanic()
 }
 
 func getKubeClientSingleton() *kubernetes.Clientset {
@@ -103,7 +103,7 @@ func collectLogStreamChannels(logConfigs []LogConfig, logStream chan []logChanMe
 	} else {
 		var lcms []logChanMessage
 		for i := 0; i < len(logConfigs); i++ {
-			lcs := <- logStream
+			lcs := <-logStream
 			logDebug("Find log stream. Follow=false")
 			for _, lc := range lcs {
 				if sign := lc.sign(); !slices.Contains(alreadyFindPod, sign) {
@@ -122,11 +122,11 @@ func collectLogStreamChannels(logConfigs []LogConfig, logStream chan []logChanMe
 
 func logStreamCrawler(config *Config, logConfig LogConfig) (lcms []logChanMessageFunc) {
 	clientset := getKubeClientSingleton()
-	jqTemplate := config.JQTemplate;
+	jqTemplate := config.JQTemplate
 	if jqTemplate == nil {
 		jqTemplate = logConfig.JQTemplate
 	}
-	namespace := config.Namespace;
+	namespace := config.Namespace
 	if namespace == nil {
 		namespace = logConfig.Namespace
 	}
@@ -171,15 +171,15 @@ func logSort(logStreamChannels chan []logChanMessage) {
 	var chans []logChanMessage
 
 	logDebug("Start sort logging. Waiting for first logStreamChannels")
-	BaseLoop:
-	for newChans := <- logStreamChannels;;newChans = func() []logChanMessage {
+BaseLoop:
+	for newChans := <-logStreamChannels; ; newChans = func() []logChanMessage {
 		select {
-		case cs := <- logStreamChannels:
+		case cs := <-logStreamChannels:
 			return cs
 		default:
 			return nil
 		}
-	}(){
+	}() {
 		if newChans != nil {
 			logDebug("Find new channels")
 			for _, c := range newChans {
@@ -188,14 +188,14 @@ func logSort(logStreamChannels chan []logChanMessage) {
 				logs = append(logs, nil)
 			}
 		}
-		
+
 		if len(chans) == 0 {
 			continue
 		}
 		endOfLogs := true
 		for i, c := range chans {
 			if logs[i] == nil {
-				if log, more := <- c.Channel; more {
+				if log, more := <-c.Channel; more {
 					logs[i] = &log
 					endOfLogs = false
 				}
@@ -269,12 +269,12 @@ func LogSort(chans []logChanMessage, logStream chan LogMessage) {
 
 	logs := make([]*LogMessage, len(chans))
 
-	BaseLoop:
+BaseLoop:
 	for {
 		endOfLogs := true
 		for i, c := range chans {
 			if logs[i] == nil {
-				if log, more := <- c.Channel; more {
+				if log, more := <-c.Channel; more {
 					logs[i] = &log
 					endOfLogs = false
 				}
@@ -310,9 +310,9 @@ func LogSort(chans []logChanMessage, logStream chan LogMessage) {
 func LogNotSort(chans *[]logChanMessage, logStream chan LogMessage) {
 	gr := sync.WaitGroup{}
 
-	var readedChannels []string;
+	var readedChannels []string
 	logDebug("Logging for channels")
-	for i := 0;;time.Sleep(1 * time.Second) {
+	for i := 0; ; time.Sleep(1 * time.Second) {
 		i++
 		for j, logc := range *chans {
 			sign := fmt.Sprintf("%s%s", logc.PodInfo.PodNamespace, logc.PodInfo.PodName)
@@ -419,7 +419,7 @@ func printInfo(config Config) {
 
 type logChanMessageFunc struct {
 	ChannelFunc func() chan LogMessage
-	PodInfo podInfo
+	PodInfo     podInfo
 }
 
 type logChanMessage struct {
@@ -432,7 +432,7 @@ func (lcm *logChanMessage) sign() string {
 }
 
 func (lcm *logChanMessageFunc) toLogChanMessage() logChanMessage {
-	return logChanMessage {
+	return logChanMessage{
 		PodInfo: lcm.PodInfo,
 		Channel: lcm.ChannelFunc(),
 	}
@@ -443,7 +443,7 @@ func (lcm *logChanMessageFunc) sign() string {
 }
 
 type podInfo struct {
-	PodName string
+	PodName      string
 	PodNamespace string
 }
 

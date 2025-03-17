@@ -44,7 +44,7 @@ func GetKubernetesClientOrPanic() *kubernetes.Clientset {
 
 func logStreamCrawlerThreadPool(logStreamChannels chan []logChanMessage, config *Config) {
 	logStream := make(chan []logChanMessageFunc)
-	chanLogCongig := make(chan LogConfig)
+	chanLogConfig := make(chan LogConfig)
 	var logConfigs []LogConfig
 	for _, logConfig := range config.Logs {
 		if matchFlags(logConfig) {
@@ -55,12 +55,17 @@ func logStreamCrawlerThreadPool(logStreamChannels chan []logChanMessage, config 
 	go collectLogStreamChannels(logConfigs, logStream, logStreamChannels)
 
 	for i := 0; i < GlobalFlags.NumThread; i++ {
-		go logStreamCrawler(config, logStream, chanLogCongig)
+		go func() {
+			for logConfig := range chanLogConfig {
+				logChanMessages := logStreamCrawler(config, logConfig)
+				logStream <- logChanMessages
+			}
+		}()
 	}
 	for {
 		logDebug("Looking for new pods")
 		for _, conf := range logConfigs {
-			chanLogCongig <- conf
+			chanLogConfig <- conf
 		}
 		if !GlobalFlags.Follow {
 			break
@@ -104,43 +109,40 @@ func collectLogStreamChannels(logConfigs []LogConfig, logStream chan []logChanMe
 	}
 }
 
-func logStreamCrawler(config *Config, logStreamChannels chan []logChanMessageFunc, chanLogConfig chan LogConfig) {
+func logStreamCrawler(config *Config, logConfig LogConfig) (lcms []logChanMessageFunc) {
 	clientset := GetKubernetesClientOrPanic()
-	for logConfig := range chanLogConfig {
-		var lcms []logChanMessageFunc
-		jqTemplate := config.JQTemplate;
-		if jqTemplate == nil {
-			jqTemplate = logConfig.JQTemplate
-		}
-		namespace := config.Namespace;
-		if namespace == nil {
-			namespace = logConfig.Namespace
-		}
-		pods, err := GetPodsByLabel(clientset, *namespace, logConfig.Labels)
-		if err != nil {
-			log.Printf("Error retrieving pods for namespace %s and labels %s: %v", *namespace, logConfig.Labels, err)
-			return
-		}
-
-		for _, podName := range pods {
-			logDebug(fmt.Sprintf("Find pod %s/%s", *namespace, podName))
-			channelGetter := func() chan LogMessage {
-				lc := make(chan LogMessage, 200)
-				go func(pod string, cfg LogConfig) {
-					defer close(lc)
-					err := StreamPodLogs(clientset, logConfig.Name, *namespace, pod, *jqTemplate, lc)
-					if err != nil {
-						log.Printf("Error handling logs for pod %s: %v", pod, err)
-					}
-				}(podName, logConfig)
-				return lc
-			}
-			lgm := logChanMessageFunc{ChannelFunc: channelGetter, PodInfo: podInfo{PodName: podName, PodNamespace: *namespace}}
-			lcms = append(lcms, lgm)
-		}
-		logStreamChannels <- lcms
-		logDebug("End log config")
+	jqTemplate := config.JQTemplate;
+	if jqTemplate == nil {
+		jqTemplate = logConfig.JQTemplate
 	}
+	namespace := config.Namespace;
+	if namespace == nil {
+		namespace = logConfig.Namespace
+	}
+	pods, err := GetPodsByLabel(clientset, *namespace, logConfig.Labels)
+	if err != nil {
+		log.Printf("Error retrieving pods for namespace %s and labels %s: %v", *namespace, logConfig.Labels, err)
+		return
+	}
+
+	for _, podName := range pods {
+		logDebug(fmt.Sprintf("Find pod %s/%s", *namespace, podName))
+		channelGetter := func() chan LogMessage {
+			lc := make(chan LogMessage, 200)
+			go func(pod string, cfg LogConfig) {
+				defer close(lc)
+				err := StreamPodLogs(clientset, logConfig.Name, *namespace, pod, *jqTemplate, lc)
+				if err != nil {
+					log.Printf("Error handling logs for pod %s: %v", pod, err)
+				}
+			}(podName, logConfig)
+			return lc
+		}
+		lgm := logChanMessageFunc{ChannelFunc: channelGetter, PodInfo: podInfo{PodName: podName, PodNamespace: *namespace}}
+		lcms = append(lcms, lgm)
+	}
+	logDebug("End log config")
+	return
 }
 
 func startLogging(logStreamChannels chan []logChanMessage) {

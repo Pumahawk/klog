@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"log"
+	"slices"
+	"sync"
 	"time"
 
 	"k8s.io/client-go/kubernetes"
@@ -29,6 +31,7 @@ func main() {
 	go logStreamCrawlerThreadPool(logStreamChannels, config)
 
 	startLogging(logStreamChannels)
+	logDebug("End klog")
 
 	// load config
 }
@@ -50,31 +53,15 @@ func logStreamCrawlerThreadPool(logStreamChannels chan []logChanMessage, config 
 			logConfigs = append(logConfigs, logConfig)
 		}
 	}
-	go func() {
-		if GlobalFlags.Follow {
-			for lc := range logStream {
-				logDebug("Find log stream. Follow=true")
-				logStreamChannels <- []logChanMessage{lc}
-			}
-		} else {
-			var lcms []logChanMessage
-			for i := 0; i < len(logConfigs); i++ {
-				lc := <- logStream
-				logDebug("Find log stream. Follow=false")
-				lcms = append(lcms, lc)
-			}
-			logDebug("Create slice logStreamChannels")
-			logStreamChannels <- lcms
-			close(logStreamChannels)
-			logDebug("Write logStreamChannels to stream")
-		}
-	}()
+
+	go collectLogStreamChannels(logConfigs, logStream, logStreamChannels)
+
 	for i := 0; i < GlobalFlags.NumThread; i++ {
 		go logStreamCrawler(config, logStream, chanLogCongig)
 	}
 	for {
-		for i, conf := range logConfigs {
-			logDebug(fmt.Sprintf("Start stream log config %d", i))
+		logDebug("Looking for new pods")
+		for _, conf := range logConfigs {
 			chanLogCongig <- conf
 		}
 		if !GlobalFlags.Follow {
@@ -86,11 +73,38 @@ func logStreamCrawlerThreadPool(logStreamChannels chan []logChanMessage, config 
 	logDebug("End stream all log configs")
 }
 
+func collectLogStreamChannels(logConfigs []LogConfig, logStream chan logChanMessage, logStreamChannels chan []logChanMessage) {
+	var alreadyFindPod []string
+	if GlobalFlags.Follow {
+		for lc := range logStream {
+			logDebug("Find log stream. Follow=true")
+			if sign := lc.sign(); !slices.Contains(alreadyFindPod, sign) {
+				logDebug(fmt.Sprintf("New pod %s", sign))
+				alreadyFindPod = append(alreadyFindPod, sign)
+				logStreamChannels <- []logChanMessage{lc}
+			}
+		}
+	} else {
+		var lcms []logChanMessage
+		for i := 0; i < len(logConfigs); i++ {
+			lc := <- logStream
+			logDebug("Find log stream. Follow=false")
+			if sign := lc.sign(); !slices.Contains(alreadyFindPod, sign) {
+				logDebug(fmt.Sprintf("New pod %s", sign))
+				alreadyFindPod = append(alreadyFindPod, sign)
+				lcms = append(lcms, lc)
+			}
+		}
+		logDebug("Create slice logStreamChannels")
+		logStreamChannels <- lcms
+		close(logStreamChannels)
+		logDebug("Write logStreamChannels to stream")
+	}
+}
+
 func logStreamCrawler(config *Config, logStreamChannels chan logChanMessage, chanLogConfig chan LogConfig) {
 	clientset := GetKubernetesClientOrPanic()
 	for logConfig := range chanLogConfig {
-		logDebug("Read log config")
-
 		jqTemplate := config.JQTemplate;
 		if jqTemplate == nil {
 			jqTemplate = logConfig.JQTemplate
@@ -108,7 +122,8 @@ func logStreamCrawler(config *Config, logStreamChannels chan logChanMessage, cha
 		for _, podName := range pods {
 			logDebug(fmt.Sprintf("Find pod %s/%s", *namespace, podName))
 			lc := make(chan LogMessage, 200)
-			logStreamChannels <- logChanMessage{Channel: lc, PodInfo: podInfo{PodName: podName, PodNamespace: *namespace}}
+			lgm := logChanMessage{Channel: lc, PodInfo: podInfo{PodName: podName, PodNamespace: *namespace}}
+			logStreamChannels <- lgm
 			go func(pod string, cfg LogConfig) {
 				defer close(lc)
 				err := StreamPodLogs(clientset, logConfig.Name, *namespace, pod, *jqTemplate, lc)
@@ -148,6 +163,7 @@ func logSort(logStreamChannels chan []logChanMessage) {
 		if newChans != nil {
 			logDebug("Find new channels")
 			for _, c := range newChans {
+				logDebug(fmt.Sprintf("Start track pod sort=true %s", c.sign()))
 				chans = append(chans, c)
 				logs = append(logs, nil)
 			}
@@ -192,16 +208,22 @@ func logSort(logStreamChannels chan []logChanMessage) {
 	}
 }
 
-func logNotSort(streamLogChannels chan []logChanMessage) {
-	for chans := range streamLogChannels {
+func logNotSort(logStreamChannels chan []logChanMessage) {
+	wg := sync.WaitGroup{}
+	for chans := range logStreamChannels {
+		logDebug("Start logging channel")
 		for _, c := range chans {
+			wg.Add(1)
 			go func() {
+				defer wg.Done()
+				logDebug(fmt.Sprintf("Start track pod sort=false %s", c.sign()))
 				for log := range c.Channel {
 					logMessage(&log)
 				}
 			}()
 		}
 	}
+	wg.Wait()
 }
 
 func logMessage(log *LogMessage) {

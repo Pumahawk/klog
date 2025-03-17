@@ -292,6 +292,10 @@ type logChanMessage struct {
 	PodInfo podInfo
 }
 
+func (lcm *logChanMessage) sign() string {
+	return fmt.Sprintf("%s/%s", lcm.PodInfo.PodNamespace, lcm.PodInfo.PodName)
+}
+
 type podInfo struct {
 	PodName string
 	PodNamespace string

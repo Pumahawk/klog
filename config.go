@@ -6,9 +6,12 @@ import (
 	"os"
 )
 
+type TemplateVars = map[string]any
+
 type Config struct {
 	Namespace *string     `json:"namespace"`
 	Template  *string     `json:"template"`
+	Vars      TemplateVars `json:"vars"`
 	Logs      []LogConfig `json:"logs"`
 }
 

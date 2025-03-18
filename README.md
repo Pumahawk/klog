@@ -44,7 +44,10 @@ Usage of klog:
 ```json
 {
   "namespace": "default",
-  "template": "{{ .Name }} {{jq .Message \"\\\"\\\\(.timestamp) \\\\(.level) \\\\(.message) \\\\(.\\\"error.stack_trace\\\" // \\\"\\\")\\\"\" }}",
+  "template": "{{ .Name }} {{jq .Message .Vars.jqtemplate }}",
+  "vars": {
+    "jqtemplate": "\"\\(.timestamp) \\(.level) \\(.message) \\(.\"error.stack_trace\" // \"\")\""
+  },
   "logs": [
     {
       "name": "auth-provider  ",

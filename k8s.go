@@ -39,7 +39,7 @@ func GetPodsByLabel(clientset *kubernetes.Clientset, namespace, labelSelector st
 	return podNames, nil
 }
 
-func StreamPodLogs(clientset *kubernetes.Clientset, name, namespace, podName, template string, logchan chan LogMessage) error {
+func StreamPodLogs(clientset *kubernetes.Clientset, name, namespace, podName, template string, logchan chan LogMessage, vars map[string]any) error {
 	podLogOptions := generatePodLogOptions()
 	req := clientset.CoreV1().Pods(namespace).GetLogs(podName, &podLogOptions)
 
@@ -50,12 +50,12 @@ func StreamPodLogs(clientset *kubernetes.Clientset, name, namespace, podName, te
 	defer podLogs.Close()
 
 	scanner := bufio.NewScanner(podLogs)
-	lp, err := LogProcessorNew(template)
+	lp, err := LogProcessorNew(template, vars)
 	if err != nil {
 		log.Fatalf("Unable to processor: %v", err)
 	}
 	for scanner.Scan() {
-		logLine := getLogMessage(name, namespace, podName, scanner.Text())
+		logLine := getLogMessage(name, namespace, podName, vars, scanner.Text())
 		formatted, err := lp.Log(logLine)
 		if err == nil {
 			logLine.Message = formatted

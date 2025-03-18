@@ -142,7 +142,7 @@ func logStreamCrawler(config *Config, logConfig LogConfig) (lcms []logChanMessag
 			lc := make(chan LogMessage, 200)
 			go func(pod string, cfg LogConfig) {
 				defer close(lc)
-				err := StreamPodLogs(clientset, logConfig.Name, *namespace, pod, *template, lc)
+				err := StreamPodLogs(clientset, logConfig.Name, *namespace, pod, *template, lc, config.Vars)
 				if err != nil {
 					log.Printf("Error handling logs for pod %s: %v", pod, err)
 				}

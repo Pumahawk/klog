@@ -36,7 +36,7 @@ func ProcessLogWithJQ(jsonStr, jqTemplate string) (string, error) {
 	return result, nil
 }
 
-func getLogMessage(name string, namespace string, podName string, log string) LogMessage {
+func getLogMessage(name string, namespace string, podName string, vars map[string]any, log string) LogMessage {
 	re := regexp.MustCompile(`^(\S+)\s(.*)`)
 	match := re.FindStringSubmatch(log)
 	return LogMessage{
@@ -45,15 +45,17 @@ func getLogMessage(name string, namespace string, podName string, log string) Lo
 		PodName:   podName,
 		Time:      match[1],
 		Message:   match[2],
+		Vars:      vars,
 	}
 }
 
 type LogProcessor struct {
 	Template       string
+	vars           map[string]any
 	templateEngine *template.Template
 }
 
-func LogProcessorNew(templateMessage string) (*LogProcessor, error) {
+func LogProcessorNew(templateMessage string, vars map[string]any) (*LogProcessor, error) {
 	funcMap := template.FuncMap{
 		"jq": ProcessLogWithJQ,
 	}
@@ -66,6 +68,7 @@ func LogProcessorNew(templateMessage string) (*LogProcessor, error) {
 	return &LogProcessor{
 		Template:       templateMessage,
 		templateEngine: tpl,
+		vars: vars,
 	}, nil
 }
 
@@ -84,6 +87,7 @@ type LogMessage struct {
 	PodName   string
 	Time      string
 	Message   string
+	Vars      map[string]any
 }
 
 func (log *LogMessage) ToString() string {

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"log"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -38,20 +39,24 @@ func GetPodsByLabel(clientset *kubernetes.Clientset, namespace, labelSelector st
 	return podNames, nil
 }
 
-func StreamPodLogs(clientset *kubernetes.Clientset, name, namespace, podName, jqTemplate string, logchan chan LogMessage) error {
+func StreamPodLogs(clientset *kubernetes.Clientset, name, namespace, podName, template string, logchan chan LogMessage) error {
 	podLogOptions := generatePodLogOptions()
 	req := clientset.CoreV1().Pods(namespace).GetLogs(podName, &podLogOptions)
 
 	podLogs, err := req.Stream(context.TODO())
 	if err != nil {
-		return fmt.Errorf("errore nel recupero dei log per %s: %v", podName, err)
+		return fmt.Errorf("Unable to retrieve logs %s: %v", podName, err)
 	}
 	defer podLogs.Close()
 
 	scanner := bufio.NewScanner(podLogs)
+	lp, err := LogProcessorNew(template)
+	if err != nil {
+		log.Fatalf("Unable to processor: %v", err)
+	}
 	for scanner.Scan() {
 		logLine := getLogMessage(name, namespace, podName, scanner.Text())
-		formatted, err := ProcessLogWithJQ(logLine.Message, jqTemplate)
+		formatted, err := lp.Log(logLine)
 		if err == nil {
 			logLine.Message = formatted
 		}

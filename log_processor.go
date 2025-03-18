@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"text/template"
 
 	"github.com/itchyny/gojq"
 )
@@ -46,6 +48,36 @@ func getLogMessage(name string, namespace string, podName string, log string) Lo
 	}
 }
 
+type LogProcessor struct {
+	Template       string
+	templateEngine *template.Template
+}
+
+func LogProcessorNew(templateMessage string) (*LogProcessor, error) {
+	funcMap := template.FuncMap{
+		"jq": ProcessLogWithJQ,
+	}
+	tpl := template.New("message")
+	tpl = tpl.Funcs(funcMap)
+	tpl, err := tpl.Parse(templateMessage)
+	if err != nil {
+		return nil, fmt.Errorf("Unable to Log Processor: %v", err)
+	}
+	return &LogProcessor{
+		Template:       templateMessage,
+		templateEngine: tpl,
+	}, nil
+}
+
+func (pr *LogProcessor) Log(lm LogMessage) (string, error) {
+	var buf bytes.Buffer
+	err := pr.templateEngine.Execute(&buf, lm)
+	if err != nil {
+		return "", fmt.Errorf("Unable execute message. %v", err)
+	}
+	return buf.String(), nil
+}
+
 type LogMessage struct {
 	Name      string
 	Namespace string
@@ -55,5 +87,5 @@ type LogMessage struct {
 }
 
 func (log *LogMessage) ToString() string {
-	return fmt.Sprintf("%s %s", log.Name, log.Message)
+	return fmt.Sprint(log.Message)
 }

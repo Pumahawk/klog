@@ -7,17 +7,17 @@ import (
 )
 
 type Config struct {
-	Namespace  *string     `json:"namespace"`
-	JQTemplate *string     `json:"jqtemplate"`
-	Logs       []LogConfig `json:"logs"`
+	Namespace *string     `json:"namespace"`
+	Template  *string     `json:"template"`
+	Logs      []LogConfig `json:"logs"`
 }
 
 type LogConfig struct {
-	Name       string   `json:"Name"`
-	Namespace  *string  `json:"namespace"`
-	Labels     string   `json:"labels"`
-	JQTemplate *string  `json:"jqtemplate"`
-	Tags       []string `json:"tags"`
+	Name      string   `json:"Name"`
+	Namespace *string  `json:"namespace"`
+	Labels    string   `json:"labels"`
+	Template  *string  `json:"template"`
+	Tags      []string `json:"tags"`
 }
 
 func LoadConfig() (*Config, error) {

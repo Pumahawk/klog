@@ -44,7 +44,7 @@ Usage of klog:
 ```json
 {
   "namespace": "default",
-  "jqtemplate": "\"\\(.timestamp) \\(.level) \\(.message) \\(.\"error.stack_trace\" // \"\")\"",
+  "template": "{{ .Name }} {{jq .Message \"\\\"\\\\(.timestamp) \\\\(.level) \\\\(.message) \\\\(.\\\"error.stack_trace\\\" // \\\"\\\")\\\"\" }}",
   "logs": [
     {
       "name": "auth-provider  ",
@@ -54,7 +54,7 @@ Usage of klog:
     {
       "name": "users-roles    ",
       "namespace": "custom",
-      "jqtemplate": ".customjqtemplate",
+      "template": "{{ ... }}",
       "labels": "app.kubernetes.io/name=users-roles",
       "tags": "tag1"
     }

@@ -8,22 +8,23 @@ import (
 )
 
 type Flags struct {
-	KubeconfigPath string
+	Burst          int
 	ConfigPath     string
-	SinceTime      *time.Time
+	Debug          bool
 	Follow         bool
-	Sort           bool
-	TailLines      *int64
-	SinceSeconds   *int64
-	Tags           []string
-	TagsOr         []string
+	Info           bool
+	KubeconfigPath string
+	Name           []string
 	NumThread      int
 	QPS            float64
-	Burst          int
-	Info           bool
-	Name           []string
-	Debug          bool
 	RefreshSeconds int
+	SinceSeconds   *int64
+	SinceTime      *time.Time
+	Sort           bool
+	Tags           []string
+	TagsOr         []string
+	TailLines      *int64
+	Template       *string
 }
 
 var GlobalFlags = Flags{}
@@ -40,6 +41,7 @@ func ParseAndValidateGlobalFlags() error {
 	flag.Float64Var(&GlobalFlags.QPS, "qps", 100, "kubernates clients QPS")
 	flag.IntVar(&GlobalFlags.Burst, "burst", 100, "kubernates clients Burst")
 	nameFlag := flag.String("name", "", "Name configuration")
+	templateFlag := flag.String("template", "", "Go template")
 	tailLinesFlag := flag.Int64("tail", -1, "tail lines")
 	sinceSeconds := flag.Int64("since", -1, "since seconds")
 	sinceTimeFlag := flag.String("since-time", "", "Since time")
@@ -47,6 +49,10 @@ func ParseAndValidateGlobalFlags() error {
 	tagsOrFlag := flag.String("tor", "", "Tags OR")
 
 	flag.Parse()
+
+	if *templateFlag != "" {
+		GlobalFlags.Template = templateFlag
+	}
 
 	if *nameFlag != "" {
 		GlobalFlags.Name = strings.Split(*nameFlag, ",")

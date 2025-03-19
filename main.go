@@ -122,9 +122,12 @@ func collectLogStreamChannels(logConfigs []LogConfig, logStream chan []logChanMe
 
 func logStreamCrawler(config *Config, logConfig LogConfig) (lcms []logChanMessageFunc) {
 	clientset := getKubeClientSingleton()
-	template := config.BaseTemplate
+	template := GlobalFlags.Template
 	if template == nil {
 		template = logConfig.Template
+	}
+	if template == nil {
+		template = config.BaseTemplate
 	}
 	if template == nil {
 		log.Fatalf("Unable to load template in config %s", logConfig.Name)

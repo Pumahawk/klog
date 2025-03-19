@@ -83,10 +83,10 @@ type LogProcessor struct {
 
 func LogProcessorNew(templateMessage string, vars map[string]any) (*LogProcessor, error) {
 	funcMap := template.FuncMap{
-		"jq": ProcessLogWithJQ,
+		"jq":         ProcessLogWithJQ,
 		"jsonDecode": JsonLogProcessDeconder,
 		"jsonEncode": JsonLogProcessEncode,
-		"mapAdd": MapAdd,
+		"mapAdd":     MapAdd,
 	}
 	tpl := template.New("message")
 	tpl = tpl.Funcs(funcMap)
@@ -97,7 +97,7 @@ func LogProcessorNew(templateMessage string, vars map[string]any) (*LogProcessor
 	return &LogProcessor{
 		Template:       templateMessage,
 		templateEngine: tpl,
-		vars: vars,
+		vars:           vars,
 	}, nil
 }
 

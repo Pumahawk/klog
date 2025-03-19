@@ -1,9 +1,9 @@
 package main
 
 import (
-	yaml "gopkg.in/yaml.v3"
 	"encoding/json"
 	"fmt"
+	yaml "gopkg.in/yaml.v3"
 	"os"
 	"regexp"
 )
@@ -11,10 +11,10 @@ import (
 type TemplateVars = map[string]any
 
 type Config struct {
-	Namespace *string     `json:"namespace"`
-	Template  *string     `json:"template"`
+	Namespace *string      `json:"namespace"`
+	Template  *string      `json:"template"`
 	Vars      TemplateVars `json:"vars"`
-	Logs      []LogConfig `json:"logs"`
+	Logs      []LogConfig  `json:"logs"`
 }
 
 type LogConfig struct {
@@ -47,4 +47,4 @@ func LoadConfig() (*Config, error) {
 	return &config, nil
 }
 
-type ConfLoader = func(in []byte, out interface{}) (err error);
+type ConfLoader = func(in []byte, out interface{}) (err error)

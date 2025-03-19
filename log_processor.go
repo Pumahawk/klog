@@ -10,7 +10,33 @@ import (
 	"github.com/itchyny/gojq"
 )
 
-func ProcessLogWithJQ(jsonStr, jqTemplate string) (string, error) {
+func JsonLogProcessEncode(value any) (string, error) {
+	var result bytes.Buffer
+	if err := json.NewEncoder(&result).Encode(value); err != nil {
+		return "", err
+	}
+	return result.String(), nil
+}
+
+func JsonLogProcessDeconder(jsonStr string) (map[string]any, error) {
+	var result map[string]any
+	bf := bytes.NewBufferString(jsonStr)
+	if err := json.NewDecoder(bf).Decode(&result); err != nil {
+		return nil, err
+	} else {
+		return result, nil
+	}
+}
+
+func MapAdd(mp map[string]any, key string, value any) map[string]any {
+	if mp == nil {
+		mp = make(map[string]any)
+	}
+	mp[key] = value
+	return mp
+}
+
+func ProcessLogWithJQ(jsonStr, jqTemplate string) (any, error) {
 	var logObj map[string]interface{}
 	if err := json.Unmarshal([]byte(jsonStr), &logObj); err != nil {
 		return "", fmt.Errorf("errore nel parsing del log: %v", err)
@@ -21,7 +47,7 @@ func ProcessLogWithJQ(jsonStr, jqTemplate string) (string, error) {
 	}
 
 	iter := query.Run(logObj)
-	var result string
+	var result any
 	for {
 		v, ok := iter.Next()
 		if !ok {
@@ -30,7 +56,7 @@ func ProcessLogWithJQ(jsonStr, jqTemplate string) (string, error) {
 		if err, isErr := v.(error); isErr {
 			return "", fmt.Errorf("errore nell'esecuzione di jq: %v", err)
 		}
-		result = fmt.Sprintf("%v", v)
+		result = v
 	}
 
 	return result, nil
@@ -58,6 +84,9 @@ type LogProcessor struct {
 func LogProcessorNew(templateMessage string, vars map[string]any) (*LogProcessor, error) {
 	funcMap := template.FuncMap{
 		"jq": ProcessLogWithJQ,
+		"jsonDecode": JsonLogProcessDeconder,
+		"jsonEncode": JsonLogProcessEncode,
+		"mapAdd": MapAdd,
 	}
 	tpl := template.New("message")
 	tpl = tpl.Funcs(funcMap)
@@ -92,4 +121,5 @@ type LogMessage struct {
 
 func (log *LogMessage) ToString() string {
 	return fmt.Sprint(log.Message)
+
 }

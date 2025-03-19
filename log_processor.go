@@ -39,11 +39,11 @@ func MapAdd(mp map[string]any, key string, value any) map[string]any {
 func ProcessLogWithJQ(jsonStr, jqTemplate string) (any, error) {
 	var logObj map[string]interface{}
 	if err := json.Unmarshal([]byte(jsonStr), &logObj); err != nil {
-		return "", fmt.Errorf("errore nel parsing del log: %v", err)
+		return nil, fmt.Errorf("errore nel parsing del log: %v", err)
 	}
 	query, err := gojq.Parse(jqTemplate)
 	if err != nil {
-		return "", fmt.Errorf("errore nel parsing della query jq: %v", err)
+		return nil, fmt.Errorf("errore nel parsing della query jq: %v", err)
 	}
 
 	iter := query.Run(logObj)
@@ -54,7 +54,7 @@ func ProcessLogWithJQ(jsonStr, jqTemplate string) (any, error) {
 			break
 		}
 		if err, isErr := v.(error); isErr {
-			return "", fmt.Errorf("errore nell'esecuzione di jq: %v", err)
+			return nil, fmt.Errorf("errore nell'esecuzione di jq: %v", err)
 		}
 		result = v
 	}

@@ -31,7 +31,7 @@ var GlobalFlags = Flags{}
 
 func ParseAndValidateGlobalFlags() error {
 	flag.StringVar(&GlobalFlags.KubeconfigPath, "kubeconfig", "", "Kubeconfig path")
-	flag.StringVar(&GlobalFlags.ConfigPath, "config", "config.json", "Config path")
+	flag.StringVar(&GlobalFlags.ConfigPath, "config", "config.yaml", "Config path")
 	flag.BoolVar(&GlobalFlags.Follow, "follow", false, "follow logs")
 	flag.BoolVar(&GlobalFlags.Sort, "sort", false, "sort log stream")
 	flag.BoolVar(&GlobalFlags.Info, "info", false, "print config info")

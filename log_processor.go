@@ -5,17 +5,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"strings"
 	"text/template"
 
 	"github.com/itchyny/gojq"
 )
 
-func JsonLogProcessEncode(value any) (string, error) {
+func JsonLogProcessEncoder(value any) (string, error) {
 	var result bytes.Buffer
 	if err := json.NewEncoder(&result).Encode(value); err != nil {
 		return "", err
 	}
-	return result.String(), nil
+	return strings.Trim(result.String(), "\n"), nil
 }
 
 func JsonLogProcessDeconder(jsonStr string) (map[string]any, error) {
@@ -85,7 +86,7 @@ func LogProcessorNew(templateMessage string, vars map[string]any, templates map[
 	funcMap := template.FuncMap{
 		"jq":         ProcessLogWithJQ,
 		"jsonDecode": JsonLogProcessDeconder,
-		"jsonEncode": JsonLogProcessEncode,
+		"jsonEncode": JsonLogProcessEncoder,
 		"mapAdd":     MapAdd,
 	}
 	tpl := &template.Template{}

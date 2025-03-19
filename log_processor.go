@@ -81,15 +81,27 @@ type LogProcessor struct {
 	templateEngine *template.Template
 }
 
-func LogProcessorNew(templateMessage string, vars map[string]any) (*LogProcessor, error) {
+func LogProcessorNew(templateMessage string, vars map[string]any, templates map[string]string) (*LogProcessor, error) {
 	funcMap := template.FuncMap{
 		"jq":         ProcessLogWithJQ,
 		"jsonDecode": JsonLogProcessDeconder,
 		"jsonEncode": JsonLogProcessEncode,
 		"mapAdd":     MapAdd,
 	}
-	tpl := template.New("message")
+	tpl := &template.Template{}
 	tpl = tpl.Funcs(funcMap)
+	if templates != nil {
+		for key, t := range templates {
+			tempTpl, err := tpl.New(key).Parse(t)
+			if err != nil {
+				return nil, err
+			} else {
+				tpl = tempTpl
+				logDebug(fmt.Sprintf("Add template %s", key))
+			}
+		}
+	}
+	tpl = tpl.New("_message")
 	tpl, err := tpl.Parse(templateMessage)
 	if err != nil {
 		return nil, fmt.Errorf("Unable to Log Processor: %v", err)
@@ -103,7 +115,7 @@ func LogProcessorNew(templateMessage string, vars map[string]any) (*LogProcessor
 
 func (pr *LogProcessor) Log(lm LogMessage) (string, error) {
 	var buf bytes.Buffer
-	err := pr.templateEngine.Execute(&buf, lm)
+	err := pr.templateEngine.ExecuteTemplate(&buf, "_message", lm)
 	if err != nil {
 		return "", fmt.Errorf("Unable execute message. %v", err)
 	}

@@ -9,12 +9,14 @@ import (
 )
 
 type TemplateVars = map[string]any
+type Templates = map[string]string
 
 type Config struct {
-	Namespace *string      `json:"namespace"`
-	Template  *string      `json:"template"`
-	Vars      TemplateVars `json:"vars"`
-	Logs      []LogConfig  `json:"logs"`
+	Namespace    *string      `json:"namespace" yaml:"namespace"`
+	BaseTemplate *string      `json:"baseTemplate" yaml:"baseTemplate"`
+	Templates    Templates    `json:"templates" yaml:"templates"`
+	Vars         TemplateVars `json:"vars" yaml:"vars"`
+	Logs         []LogConfig  `json:"logs" yaml:"logs"`
 }
 
 type LogConfig struct {

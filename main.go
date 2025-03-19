@@ -122,9 +122,12 @@ func collectLogStreamChannels(logConfigs []LogConfig, logStream chan []logChanMe
 
 func logStreamCrawler(config *Config, logConfig LogConfig) (lcms []logChanMessageFunc) {
 	clientset := getKubeClientSingleton()
-	template := config.Template
+	template := config.BaseTemplate
 	if template == nil {
 		template = logConfig.Template
+	}
+	if template == nil {
+		log.Fatalf("Unable to load template in config %s", logConfig.Name)
 	}
 	namespace := config.Namespace
 	if namespace == nil {
@@ -142,7 +145,15 @@ func logStreamCrawler(config *Config, logConfig LogConfig) (lcms []logChanMessag
 			lc := make(chan LogMessage, 200)
 			go func(pod string, cfg LogConfig) {
 				defer close(lc)
-				err := StreamPodLogs(clientset, logConfig.Name, *namespace, pod, *template, lc, config.Vars)
+				vars := config.Vars
+				if vars == nil {
+					vars = make(map[string]any)
+				}
+				templates := config.Templates
+				if templates == nil {
+					templates = make(map[string]string)
+				}
+				err := StreamPodLogs(clientset, logConfig.Name, *namespace, pod, *template, lc, vars, templates)
 				if err != nil {
 					log.Printf("Error handling logs for pod %s: %v", pod, err)
 				}
@@ -380,8 +391,8 @@ func printInfo(config Config) {
 		globalNamespace = *config.Namespace
 	}
 	var globalJqTemplate string
-	if config.Template != nil {
-		globalJqTemplate = *config.Template
+	if config.BaseTemplate != nil {
+		globalJqTemplate = *config.BaseTemplate
 	}
 
 	fmt.Printf("Global namespace:  %s\n", globalNamespace)

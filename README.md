@@ -41,7 +41,7 @@ Usage of klog:
         Tags OR
 ```
 
-## config.json
+## config.yaml
 
 ```yaml
 baseTemplate: '{{ template "withJq" . }}'

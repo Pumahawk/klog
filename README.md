@@ -1,13 +1,13 @@
 # Table of contents
-- [:rocket: Installation](#:rocket:-installation)
-- [:wrench: Helpful Aliases](#:wrench:-helpful-aliases)
-- [:wrench: Usage](#:wrench:-usage)
-  - [**Kubernetes & klog Configuration**](#**kubernetes-&-klog-configuration**)
-  - [**Inspecting Configuration with** `-info`](#**inspecting-configuration-with**-`-info`)
-  - [`-sort`: **Sort Logs by Time**](#`-sort`:-**sort-logs-by-time**)
-  - [`-follow`: **Follow Logs in Real-Time**](#`-follow`:-**follow-logs-in-real-time**)
-  - [**Filtering Configurations with** `-t`, `-tor`, and `-name`](#**filtering-configurations-with**-`-t`,-`-tor`,-and-`-name`)
-- [:page_facing_up: klog Configuration File](#:page_facing_up:-klog-configuration-file)
+- [Installation](#rocket-installation)
+- [Helpful Aliases](#wrench-helpful-aliases)
+- [Usage](#wrench-usage)
+  - [Kubernetes & klog Configuration](#kubernetes--klog-configuration)
+  - [Inspecting Configuration with `-info`](#inspecting-configuration-with--info)
+  - [`-sort`: Sort Logs by Time](#-sort-sort-logs-by-time)
+  - [`-follow`: Follow Logs in Real-Time](#-follow-follow-logs-in-real-time)
+  - [Filtering Configurations with `-t`, `-tor`, and `-name`](#filtering-configurations-with--t--tor-and--name)
+- [klog Configuration File](#page_facing_up-klog-configuration-file)
   - [Summary](#summary)
 
 **klog** is a Go-based CLI application designed to simplify log management in **Kubernetes** environments.

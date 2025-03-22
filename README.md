@@ -9,6 +9,7 @@
   - [Filtering Configurations with `-t`, `-tor`, and `-name`](#filtering-configurations-with--t--tor-and--name)
 - [klog Configuration File](#page_facing_up-klog-configuration-file)
   - [Summary](#summary)
+- [Valid configuration example](#valid-configuration-example)
 
 **klog** is a Go-based CLI application designed to simplify log management in **Kubernetes** environments.
 
@@ -186,7 +187,7 @@ klog -kubeconfig ... -config ... -follow -sort=false -tail 1
 
 `-t`: **Filter by Tags (AND Condition)**
 
-The `-t` flag enables filtering based on specific tags. Only configurations that contain *-t**all the tags you specify
+The `-t` flag enables filtering based on specific tags. Only configurations that contain **-t** all the tags you specify
 will be considered. Tags are specified as a comma-separated list.
 
 `-tor`: **Filter by Tags (OR Condition)**
@@ -200,7 +201,7 @@ The `-tor` flag allows filtering based on tags with an **OR** condition. Only co
 klog -kubeconfig ... -config ... -info -t env:dev,participant -tor name:authentication-provider,name:echo-backend
 ```
 
-This command will return configurations that match at least one tag from **env:dev,participant** and have the
+This command will return configurations that match at least one tag from **name:authentication-provider,name:echo-backend** and have the
 all tags **env:dev,participant**
 
 # :page_facing_up: klog Configuration File
@@ -291,3 +292,31 @@ Each entry can optionally specify a `template` to override the default log templ
 ## Summary
 The klog configuration file allows you to fine-tune the way logs are fetched, filtered, and formatted.
 By customizing the `templates`, `vars`, and `logs` sections, you can tailor klog to suit your specific Kubernetes logging needs.
+
+# Valid configuration example
+
+```yaml
+templates:
+  basicMessage: "{{ .Name }} {{.PodName}} {{ .Message }}"
+  basicMessageAndPodInfo: '{{ printf "%s/%s" .Namespace .PodName }} {{ .Message }}'
+  withJq: "{{ .Name }} {{ jq .Message .Vars.jqtemplate }}"
+  withJqAndPodInfo: '{{ printf "%s/%s" .Namespace .PodName }} {{ jq .Message .Vars.jqtemplate }}'
+  toJson: |
+    {{with $mm := jq .Message .Vars.jqRoot -}}
+      {{- mapAdd $mm "name" $.Name | jsonEncode -}}
+    {{- else -}}
+      NONE
+    {{- end -}}
+  withTextMessage: '{{ template "basicMessage" . }}'
+  withJsonMessage: '{{ template "withJq" . }}'
+vars:
+  jqtemplate: >
+    "\(.timestamp) \(.level) \(.message) \(."error.stack_trace" // "")"
+  jqRoot: .
+logs:
+  - namespace: "iaa-dstest-data-provider"
+    template: '{{ template "withJsonMessage" . }}'
+    name: "test-data-provider/authentication-provider    "
+    labels: "app.kubernetes.io/name=authentication-provider"
+    tags: ["participant", "env:test", "dstest-data-provider", "type:data-provider", "name:authentication-provider"]
+```

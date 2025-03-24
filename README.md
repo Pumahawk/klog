@@ -74,6 +74,7 @@ This alias simplifies the command by automatically:
 - Sorting the log output.
 
 ```bash
+alias kloggetdate='date -Iseconds -d -10minutes'
 alias klog='klog -kubeconfig "$KUBECONFIG" -since-time "${KLTIME-$(kloggetdate)}" -sort'
 ```
 

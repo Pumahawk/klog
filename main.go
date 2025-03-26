@@ -173,20 +173,24 @@ func logStreamCrawler(config *Config, logConfig LogConfig) (lcms []logChanMessag
 func startLogging(logStreamChannels chan []logChanMessage) {
 	logDebug("Start logging")
 	if GlobalFlags.Sort {
-		logSort(logStreamChannels)
+		logSort(GlobalFlags.Follow, logStreamChannels)
 	} else {
 		logNotSort(logStreamChannels)
 	}
 }
 
-func logSort(logStreamChannels chan []logChanMessage) {
+func logSort(follow bool, logStreamChannels chan []logChanMessage) {
 	logs := make([]*LogMessage, 0)
 
 	var chans []logChanMessage
 
 	logDebug("Start sort logging. Waiting for first logStreamChannels")
 BaseLoop:
-	for newChans := <-logStreamChannels; ; newChans = func() []logChanMessage {
+	for endOfLogs, newChans := false, (<-logStreamChannels);!endOfLogs; newChans = func() []logChanMessage {
+		if len(chans) == 0 && !follow {
+			logDebug("End BaseLoop in increment operation")
+			endOfLogs = true
+		}
 		select {
 		case cs := <-logStreamChannels:
 			return cs
@@ -206,7 +210,7 @@ BaseLoop:
 		if len(chans) == 0 {
 			continue
 		}
-		endOfLogs := true
+		endOfLogs = true
 		for i, c := range chans {
 			if logs[i] == nil {
 				if log, more := <-c.Channel; more {
@@ -216,10 +220,9 @@ BaseLoop:
 			} else {
 				endOfLogs = false
 			}
-			if l := logs[i]; l != nil {
-			}
 		}
 		if endOfLogs {
+			logDebug("End BaseLoop.")
 			break BaseLoop
 		}
 
